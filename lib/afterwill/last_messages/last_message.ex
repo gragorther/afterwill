@@ -18,6 +18,7 @@ defmodule Afterwill.LastMessages.LastMessage do
     last_message
     |> cast(attrs, [:title, :content])
     |> validate_required([:title, :content])
+    |> cast_assoc(:recipients)
     |> put_change(:user_id, user_scope.user.id)
   end
 end
