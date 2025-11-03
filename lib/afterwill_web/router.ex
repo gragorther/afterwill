@@ -66,7 +66,10 @@ defmodule AfterwillWeb.Router do
       pipe_through [:redirect_if_authenticated]
 
       live_session :current_user,
-        on_mount: [{AfterwillWeb.UserAuth, :mount_current_scope}] do
+        on_mount: [
+          {AfterwillWeb.UserAuth, :mount_current_scope},
+          {AfterwillWeb.UserAuth, :redirect_if_authenticated}
+        ] do
         live "/users/register", UserLive.Registration, :new
         live "/users/log-in", UserLive.Login, :new
         live "/users/log-in/:token", UserLive.Confirmation, :new

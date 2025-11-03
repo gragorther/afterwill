@@ -215,6 +215,19 @@ defmodule AfterwillWeb.UserAuth do
     {:cont, mount_current_scope(socket, session)}
   end
 
+  def on_mount(:redirect_if_authenticated, _params, _session, socket) do
+    if socket.assigns.current_scope && socket.assigns.current_scope.user do
+      socket =
+        socket
+        |> Phoenix.LiveView.put_flash(:error, "You are already logged in")
+        |> Phoenix.LiveView.redirect(to: ~p"/")
+
+      {:halt, socket}
+    else
+      {:cont, socket}
+    end
+  end
+
   def on_mount(:require_authenticated, _params, session, socket) do
     socket = mount_current_scope(socket, session)
 
