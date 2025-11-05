@@ -6,6 +6,8 @@ defmodule Afterwill.Accounts.User do
     field :email, :string
     field :password, :string, virtual: true, redact: true
     field :hashed_password, :string, redact: true
+    field :sent_emails, :integer, default: 0
+    field :max_sent_emails, :integer, default: 7
     field :confirmed_at, :utc_datetime
     field :authenticated_at, :utc_datetime, virtual: true
 

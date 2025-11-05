@@ -9,6 +9,6 @@ defmodule Afterwill.Repo.Migrations.CreateRecipients do
       timestamps(type: :utc_datetime)
     end
 
-    create index(:recipients, [:last_message])
+    create index(:recipients, [:last_message_id])
   end
 end

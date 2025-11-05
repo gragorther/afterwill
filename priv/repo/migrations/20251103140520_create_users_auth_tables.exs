@@ -6,6 +6,8 @@ defmodule Afterwill.Repo.Migrations.CreateUsersAuthTables do
 
     create table(:users) do
       add :email, :citext, null: false
+      add :sent_emails, :integer, default: 0, null: false
+      add :max_sent_emails, :integer, default: 7, null: false
       add :hashed_password, :string
       add :confirmed_at, :utc_datetime
 

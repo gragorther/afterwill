@@ -62,6 +62,10 @@ defmodule Afterwill.LastMessages do
     Repo.get_by!(LastMessage, id: id, user_id: scope.user.id)
   end
 
+  def get_last_message(scope, id) do
+    Repo.get_by(LastMessage, id: id, user_id: scope.user.id)
+  end
+
   @doc """
   Creates a last_message.
 
