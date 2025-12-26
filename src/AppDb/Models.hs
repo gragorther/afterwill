@@ -1,29 +1,37 @@
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Database.Models (User (..), userSchema, Message (..), messageSchema, Recipient (..), recipientSchema, Group (..), groupSchema) where
+module AppDb.Models (exec, User (..), userSchema, Message (..), messageSchema, Recipient (..), recipientSchema, Group (..), groupSchema, MessageGroup (..), mgSchema, DB, UserId, MessageId, RecipientId) where
 
+import Control.Monad.Reader
 import Data.Int (Int64)
 import Data.Text (Text)
 import GHC.Generics (Generic)
+import Hasql.Connection (Connection)
+import qualified Hasql.Session as HasqlSession
 import Rel8
+
+type DB = ReaderT Connection IO
+
+exec :: Statement exprs -> DB (Either HasqlSession.SessionError ())
+exec stmt = ReaderT $ \conn -> do
+  let hasqlStmt = run_ stmt
+  HasqlSession.run (HasqlSession.statement () hasqlStmt) conn
 
 newtype UserId = UserId Int64 deriving newtype (DBEq, DBType, Eq, Show)
 
 data User f = User
   { userId :: Column f UserId,
-    userName :: Column f String,
-    userEmail :: Column f String,
-    userPasswordHash :: Column f String
+    userName :: Column f (Maybe Text),
+    userEmail :: Column f Text,
+    userPasswordHash :: Column f (Maybe Text),
+    userUsername :: Column f Text
   }
   deriving stock (Generic)
   deriving anyclass (Rel8able)
@@ -38,7 +46,8 @@ userSchema =
           { userId = "id",
             userName = "name",
             userEmail = "email",
-            userPasswordHash = "password_hash"
+            userPasswordHash = "password_hash",
+            userUsername = "username"
           }
     }
 
@@ -46,7 +55,8 @@ newtype MessageId = MessageId Int64 deriving newtype (DBEq, DBType, Eq, Show)
 
 data Message f = Message
   { messageId :: Column f MessageId,
-    messageContent :: Column f Text
+    messageContent :: Column f Text,
+    messageTitle :: Column f Text
   }
   deriving stock (Generic)
   deriving anyclass (Rel8able)
@@ -54,15 +64,16 @@ data Message f = Message
 messageSchema :: TableSchema (Message Name)
 messageSchema =
   TableSchema
-    { name = "users",
+    { name = "messages",
       columns =
         Message
           { messageId = "id",
-            messageContent = "content"
+            messageContent = "content",
+            messageTitle = "title"
           }
     }
 
-newtype GroupId = GroupID Int64 deriving newtype (DBEq, DBType, Eq, Show)
+newtype GroupId = GroupId Int64 deriving newtype (DBEq, DBType, Eq, Show)
 
 data Group f = Group
   { groupName :: Column f Text,
@@ -92,6 +103,17 @@ data MessageGroup f = MessageGroup
   }
   deriving stock (Generic)
   deriving anyclass (Rel8able)
+
+mgSchema :: TableSchema (MessageGroup Name)
+mgSchema =
+  TableSchema
+    { name = "messages_groups",
+      columns =
+        MessageGroup
+          { mgMessageId = "message_id",
+            mgGroupId = "group_id"
+          }
+    }
 
 newtype RecipientId = RecipientId Int64 deriving newtype (DBEq, DBType, Eq, Show)
 

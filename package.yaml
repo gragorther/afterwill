@@ -40,6 +40,8 @@ library:
     - servant-server
     - rel8
     - text
+    - mtl
+    - hasql
 
 executables:
   afterwill-exe:
