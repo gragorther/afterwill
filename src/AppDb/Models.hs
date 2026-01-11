@@ -7,8 +7,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module AppDb.Models (exec, User (..), userSchema, Message (..), messageSchema, Recipient (..), recipientSchema, Group (..), groupSchema, MessageGroup (..), mgSchema, DB, UserId, MessageId, RecipientId) where
+module AppDb.Models (query, query1, queryMaybe, exec, DbUser (..), userSchema, DbMessage (..), messageSchema, DbRecipient (..), recipientSchema, DbGroup (..), groupSchema, MessageGroup (..), mgSchema, DB, UserId, MessageId, RecipientId, GroupId) where
 
+import Control.Monad.Except (ExceptT (ExceptT))
 import Control.Monad.Reader
 import Data.Int (Int64)
 import Data.Text (Text)
@@ -17,89 +18,110 @@ import Hasql.Connection (Connection)
 import qualified Hasql.Session as HasqlSession
 import Rel8
 
-type DB = ReaderT Connection IO
+type DB = ReaderT Connection (ExceptT HasqlSession.SessionError IO)
 
-exec :: Statement exprs -> DB (Either HasqlSession.SessionError ())
-exec stmt = ReaderT $ \conn -> do
+exec :: Statement exprs -> DB ()
+exec stmt = do
+  conn <- ask
   let hasqlStmt = run_ stmt
-  HasqlSession.run (HasqlSession.statement () hasqlStmt) conn
+  lift $ ExceptT $ HasqlSession.run (HasqlSession.statement () hasqlStmt) conn
+
+query :: (Serializable exprs a) => Query exprs -> DB [a]
+query q = do
+  conn <- ask
+  let hasqlStmt = run $ select q
+  lift $ ExceptT $ HasqlSession.run (HasqlSession.statement () hasqlStmt) conn
+
+query1 :: (Serializable exprs a) => Query exprs -> DB a
+query1 q = do
+  conn <- ask
+  let hasqlStmt = run1 $ select q
+  lift $ ExceptT $ HasqlSession.run (HasqlSession.statement () hasqlStmt) conn
+
+queryMaybe :: (Serializable exprs a) => Query exprs -> DB (Maybe a)
+queryMaybe q = do
+  conn <- ask
+  let hasqlStmt = runMaybe $ select q
+  lift $ ExceptT $ HasqlSession.run (HasqlSession.statement () hasqlStmt) conn
 
 newtype UserId = UserId Int64 deriving newtype (DBEq, DBType, Eq, Show)
 
-data User f = User
-  { userId :: Column f UserId,
-    userName :: Column f (Maybe Text),
-    userEmail :: Column f Text,
-    userPasswordHash :: Column f (Maybe Text),
-    userUsername :: Column f Text
+data DbUser f = DbUser
+  { id :: Column f UserId,
+    name :: Column f (Maybe Text),
+    email :: Column f Text,
+    passwordHash :: Column f Text,
+    username :: Column f Text
   }
   deriving stock (Generic)
   deriving anyclass (Rel8able)
 
-userSchema :: TableSchema (User Name)
+userSchema :: TableSchema (DbUser Name)
 userSchema =
   TableSchema
     { name = "users",
       --     schema = Nothing,
       columns =
-        User
-          { userId = "id",
-            userName = "name",
-            userEmail = "email",
-            userPasswordHash = "password_hash",
-            userUsername = "username"
+        DbUser
+          { id = "id",
+            name = "name",
+            email = "email",
+            passwordHash = "password_hash",
+            username = "username"
           }
     }
 
 newtype MessageId = MessageId Int64 deriving newtype (DBEq, DBType, Eq, Show)
 
-data Message f = Message
-  { messageId :: Column f MessageId,
-    messageContent :: Column f Text,
-    messageTitle :: Column f Text
+data DbMessage f = DbMessage
+  { id :: Column f MessageId,
+    content :: Column f Text,
+    title :: Column f Text,
+    userId :: Column f UserId
   }
   deriving stock (Generic)
   deriving anyclass (Rel8able)
 
-messageSchema :: TableSchema (Message Name)
+messageSchema :: TableSchema (DbMessage Name)
 messageSchema =
   TableSchema
     { name = "messages",
       columns =
-        Message
-          { messageId = "id",
-            messageContent = "content",
-            messageTitle = "title"
+        DbMessage
+          { id = "id",
+            content = "content",
+            title = "title",
+            userId = "user_id"
           }
     }
 
 newtype GroupId = GroupId Int64 deriving newtype (DBEq, DBType, Eq, Show)
 
-data Group f = Group
-  { groupName :: Column f Text,
-    groupDescription :: Column f (Maybe Text),
-    groupId :: Column f GroupId,
-    groupUserId :: Column f UserId
+data DbGroup f = DbGroup
+  { name :: Column f Text,
+    description :: Column f (Maybe Text),
+    id :: Column f GroupId,
+    userId :: Column f UserId
   }
   deriving stock (Generic)
   deriving anyclass (Rel8able)
 
-groupSchema :: TableSchema (Group Name)
+groupSchema :: TableSchema (DbGroup Name)
 groupSchema =
   TableSchema
     { name = "groups",
       columns =
-        Group
-          { groupName = "name",
-            groupDescription = "description",
-            groupId = "id",
-            groupUserId = "user_id"
+        DbGroup
+          { name = "name",
+            description = "description",
+            id = "id",
+            userId = "user_id"
           }
     }
 
 data MessageGroup f = MessageGroup
-  { mgMessageId :: Column f MessageId,
-    mgGroupId :: Column f GroupId
+  { messageId :: Column f MessageId,
+    groupId :: Column f GroupId
   }
   deriving stock (Generic)
   deriving anyclass (Rel8able)
@@ -110,24 +132,24 @@ mgSchema =
     { name = "messages_groups",
       columns =
         MessageGroup
-          { mgMessageId = "message_id",
-            mgGroupId = "group_id"
+          { messageId = "message_id",
+            groupId = "group_id"
           }
     }
 
 newtype RecipientId = RecipientId Int64 deriving newtype (DBEq, DBType, Eq, Show)
 
-data Recipient f = Recipient
-  {recipientEmail :: Column f Text, recipientGroupId :: Column f GroupId, recipientId :: Column f RecipientId}
+data DbRecipient f = DbRecipient
+  {email :: Column f Text, groupId :: Column f GroupId, id :: Column f RecipientId}
 
-recipientSchema :: TableSchema (Recipient Name)
+recipientSchema :: TableSchema (DbRecipient Name)
 recipientSchema =
   TableSchema
     { name = "recipients",
       columns =
-        Recipient
-          { recipientEmail = "email",
-            recipientGroupId = "group_id",
-            recipientId = "id"
+        DbRecipient
+          { email = "email",
+            groupId = "group_id",
+            id = "id"
           }
     }

@@ -28,7 +28,7 @@ library
       AppDb.Message
       AppDb.Models
       AppDb.User
-      Server
+      Server.APITypes
   other-modules:
       Paths_afterwill
   autogen-modules:

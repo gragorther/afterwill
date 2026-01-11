@@ -1,29 +1,70 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE OverloadedRecordDot #-}
+{-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-missing-fields #-}
 
-module AppDb.User (createUser, deleteUser) where
+module AppDb.User (createUser, deleteUser, userById) where
 
 import AppDb.Models
-import qualified Hasql.Session as HasqlSession
-import Rel8 (Delete (Delete, deleteWhere, from, returning, using), Expr, Insert (Insert, into, onConflict, returning, rows), OnConflict (DoNothing), Returning (NoReturning), delete, insert, lit, values, (==.))
+import Data.Text (Text)
+import GHC.Generics (Generic)
+import Rel8
 
-createUser :: User Expr -> DB (Either HasqlSession.SessionError ())
+data User = User
+  { username :: Text,
+    email :: Text,
+    id :: UserId,
+    name :: Maybe Text,
+    passwordHash :: Text
+  }
+  deriving (Generic)
+
+toDbUser :: User -> DbUser Result
+toDbUser usr =
+  DbUser
+    { username = usr.username,
+      email = usr.email,
+      passwordHash = usr.passwordHash,
+      name = usr.name,
+      id = usr.id
+    }
+
+fromDbUser :: DbUser Result -> User
+fromDbUser usr =
+  User
+    { username = usr.username
+    }
+
+createUser :: User -> DB ()
 createUser user =
   exec $
     insert
       Insert
         { into = userSchema,
-          rows = values [user],
+          rows = values [lit $ toDbUser user],
           onConflict = DoNothing,
           returning = NoReturning
         }
 
-deleteUser :: UserId -> DB (Either HasqlSession.SessionError ())
+deleteUser :: UserId -> DB ()
 deleteUser userToDeleteId =
   exec $
     delete
       Delete
         { from = userSchema,
           using = pure (),
-          deleteWhere = \_ u -> userId u ==. lit userToDeleteId,
+          deleteWhere = \_ u -> u.id ==. lit userToDeleteId,
           returning = NoReturning
         }
+
+userById :: UserId -> DB (Maybe User)
+userById uid =
+  fmap
+    (fmap fromDbUser)
+    ( queryMaybe $ do
+        user <- each userSchema
+        where_ $ user.id ==. lit uid
+        return user
+    )
