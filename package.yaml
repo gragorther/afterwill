@@ -33,15 +33,9 @@ ghc-options:
 - -Wpartial-fields
 - -Wredundant-constraints
 
-library:
-  source-dirs: src
-  dependencies:
-    - servant
-    - servant-server
-    - rel8
-    - text
-    - mtl
-    - hasql
+#library:
+#  source-dirs: src
+#  dependencies:
 
 executables:
   afterwill-exe:
@@ -52,7 +46,12 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - afterwill
+    - servant
+    - servant-server
+    - rel8
+    - text
+    - mtl
+    - hasql
 
 tests:
   afterwill-test:
