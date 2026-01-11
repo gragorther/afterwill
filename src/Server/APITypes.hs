@@ -9,11 +9,14 @@ module Server.APITypes
     MessageAPI,
     GroupAPI,
     RecipientAPI,
+    API,
   )
 where
 
 import Data.Text (Text)
+import GHC.Natural (Natural)
 import Servant
+import Servant.Auth (Auth)
 
 type AppRespType = JSON
 
@@ -26,7 +29,11 @@ type AppDelete = Delete '[AppRespType]
 type AppPost = Post '[AppRespType]
 
 -- to allow changing the type the app uses for various IDs in the future
-type ID = Int
+type ID = Natural
+
+type Protected = MessageAPI :<|> GroupAPI :<|> RecipientAPI
+
+type API auths = (Servant.Auth.Auth auths ID :> Protected)
 
 type CRUDAPI create read =
   AppReqBody create :> PostNoContent -- create

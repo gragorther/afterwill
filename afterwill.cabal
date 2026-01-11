@@ -9,9 +9,9 @@ version:        0.1.0.0
 description:    Please see the README on GitHub at <https://github.com/gragorther/afterwill#readme>
 homepage:       https://github.com/gragorther/afterwill#readme
 bug-reports:    https://github.com/gragorther/afterwill/issues
-author:         lena
+author:         gregor
 maintainer:     gregor@gregtech.eu
-copyright:      AGPL
+copyright:      (c) Gregor Podjed
 license:        BSD-3-Clause
 license-file:   LICENSE
 build-type:     Simple
@@ -42,6 +42,8 @@ library
     , mtl
     , rel8
     , servant
+    , servant-auth
+    , servant-auth-server
     , servant-server
     , text
   default-language: Haskell2010

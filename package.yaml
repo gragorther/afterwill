@@ -2,9 +2,9 @@ name:                afterwill
 version:             0.1.0.0
 github:              "gragorther/afterwill"
 license:             BSD-3-Clause
-author:              "lena"
+author:              "gregor"
 maintainer:          "gregor@gregtech.eu"
-copyright:           "AGPL"
+copyright:           "(c) Gregor Podjed"
 
 extra-source-files:
 - README.md
@@ -42,6 +42,8 @@ library:
     - text
     - mtl
     - hasql
+    - servant-auth
+    - servant-auth-server
 
 executables:
   afterwill-exe:
